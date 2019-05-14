@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 void                SDL_ExitWithError(const char *message)
 {
     SDL_Log("Erreur: %s > %s\n", message, SDL_GetError());
@@ -13,35 +16,55 @@ int                 main(int argc, char **argv)
 {
     SDL_Window      *window = NULL;
     SDL_Renderer    *renderer = NULL;
-    SDL_Rect        rectangle;
+    SDL_Surface     *image = NULL;
+    SDL_Texture     *texture = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         SDL_ExitWithError("Initialisation SDL");
     
-    if (SDL_CreateWindowAndRenderer(800, 600, 0, &window, &renderer) != 0)
+    if (SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer) != 0)
         SDL_ExitWithError("Impossible de creer la fenetre et le rendu");
     
-    if (SDL_SetRenderDrawColor(renderer, 112, 168, 237, SDL_ALPHA_OPAQUE) != 0)
-        SDL_ExitWithError("Impossible de changer la couleur pour le rendu");
-    
-    if (SDL_RenderDrawPoint(renderer, 100, 450) != 0)
-        SDL_ExitWithError("Impossible de dessiner un point");
+    image = SDL_LoadBMP("paysage.bmp");
 
-    if (SDL_RenderDrawLine(renderer, 50, 50, 500, 500) != 0)
-        SDL_ExitWithError("Impossible de dessiner la ligne");
+    if (image == NULL)
+    {
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_ExitWithError("Impossible de charger l'image");
+    }
 
-    rectangle.x = 300;
-    rectangle.y = 300;
-    rectangle.w = 200;
-    rectangle.h = 120;
+    texture = SDL_CreateTextureFromSurface(renderer, image);
+    SDL_FreeSurface(image);
 
-    if (SDL_SetRenderDrawColor(renderer, 255, 15, 15, SDL_ALPHA_OPAQUE) != 0)
-        SDL_ExitWithError("Impossible de changer la couleur pour le rendu");
+    if (texture == NULL)
+    {
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_ExitWithError("Impossible de creer la texture");
+    }
 
-    if (SDL_RenderFillRect(renderer, &rectangle) != 0)
-        SDL_ExitWithError("Impossible de dessiner le rectangle");
+    SDL_Rect        rectangle;
+
+    if (SDL_QueryTexture(texture, NULL, NULL, &rectangle.w, &rectangle.h) != 0)
+    {
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_ExitWithError("Impossible de charger la texture");
+    }
+
+    rectangle.x = (WINDOW_WIDTH - rectangle.w) / 2;
+    rectangle.y = (WINDOW_HEIGHT - rectangle.h) / 2;
+
+    if (SDL_RenderCopy(renderer, texture, NULL, &rectangle) != 0)
+    {
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_ExitWithError("Impossible d'afficher la texture");
+    }
 
     SDL_RenderPresent(renderer);
+
     SDL_Delay(6000);
     
     SDL_DestroyRenderer(renderer);
