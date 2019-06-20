@@ -12,12 +12,22 @@ void                SDL_ExitWithError(const char *message)
     exit(EXIT_FAILURE);
 }
 
+void                SDL_LimitFPS(unsigned int limit)
+{
+    unsigned int    ticks = SDL_GetTicks();
+
+    if (limit < ticks)
+        return ;
+    else if (limit > ticks + 16)
+        SDL_Delay(16);
+    else
+        SDL_Delay(limit - ticks);
+}
+
 int                 main(int argc, char **argv)
 {
     SDL_Window      *window = NULL;
     SDL_Renderer    *renderer = NULL;
-    SDL_Surface     *image = NULL;
-    SDL_Texture     *texture = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         SDL_ExitWithError("Initialisation SDL");
@@ -25,51 +35,34 @@ int                 main(int argc, char **argv)
     if (SDL_CreateWindowAndRenderer(WINDOW_WIDTH, WINDOW_HEIGHT, 0, &window, &renderer) != 0)
         SDL_ExitWithError("Impossible de creer la fenetre et le rendu");
     
-    image = SDL_LoadBMP("paysage.bmp");
+    SDL_bool        program_launched = SDL_TRUE;
+    unsigned int    frame_limit = 0;
 
-    if (image == NULL)
+    frame_limit = SDL_GetTicks() + 16;
+    SDL_LimitFPS(frame_limit);
+    frame_limit = SDL_GetTicks() + 16;
+
+    while (program_launched)
     {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_ExitWithError("Impossible de charger l'image");
+        SDL_Event event;
+
+        while (SDL_PollEvent(&event))
+        {
+            switch(event.type)
+            {
+                case SDL_QUIT:
+                    program_launched = SDL_FALSE;
+                    break;
+
+                default:
+                    break;
+            }
+        }
     }
-
-    texture = SDL_CreateTextureFromSurface(renderer, image);
-    SDL_FreeSurface(image);
-
-    if (texture == NULL)
-    {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_ExitWithError("Impossible de creer la texture");
-    }
-
-    SDL_Rect        rectangle;
-
-    if (SDL_QueryTexture(texture, NULL, NULL, &rectangle.w, &rectangle.h) != 0)
-    {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_ExitWithError("Impossible de charger la texture");
-    }
-
-    rectangle.x = (WINDOW_WIDTH - rectangle.w) / 2;
-    rectangle.y = (WINDOW_HEIGHT - rectangle.h) / 2;
-
-    if (SDL_RenderCopy(renderer, texture, NULL, &rectangle) != 0)
-    {
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_ExitWithError("Impossible d'afficher la texture");
-    }
-
-    SDL_RenderPresent(renderer);
-
-    SDL_Delay(6000);
     
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
-    
     SDL_Quit();
+    
     return EXIT_SUCCESS;
 }
